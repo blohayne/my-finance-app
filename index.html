@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#f5f5f5" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <title>MyFinanceApp</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ===== TELA 01: DASHBOARD ===== -->
+  <div id="screen-dashboard" class="screen active">
+    <header class="app-header">
+      <button class="btn-header-icon" id="btn-historico" aria-label="Histórico">📅</button>
+      <span class="app-title">MyFinanceApp</span>
+      <button class="btn-header-icon" id="btn-config" aria-label="Configurar limites">⚙️</button>
+    </header>
+
+    <div class="balance-section">
+      <p class="label-sm">Saldo disponível:</p>
+      <p class="balance-value" id="dash-saldo">R$ 0,00</p>
+      <p class="savings-label" id="dash-reserva">Reserva Poupança: R$ 0,00</p>
+    </div>
+
+    <div class="categories-list" id="categories-list"></div>
+
+    <button class="fab" id="btn-fab" aria-label="Nova transação">+</button>
+  </div>
+
+  <!-- ===== TELA 01.1: MENU DE ESCOLHA (bottom sheet) ===== -->
+  <div id="screen-menu" class="screen">
+    <div class="bottom-sheet-overlay" id="overlay-menu"></div>
+    <div class="bottom-sheet">
+      <button class="menu-option" id="btn-ajustar-reserva">Ajustar reserva</button>
+      <button class="menu-option" id="btn-nova-entrada">Nova entrada</button>
+      <button class="menu-option primary" id="btn-novo-gasto">Novo gasto</button>
+    </div>
+  </div>
+
+  <!-- ===== TELA 02: NOVO GASTO ===== -->
+  <div id="screen-novo-gasto" class="screen">
+    <div class="form-screen">
+      <p class="form-screen-label gasto">Novo gasto</p>
+      <div class="value-input-wrapper" id="gasto-value-wrapper">
+        <span class="currency-symbol gasto" id="gasto-currency">R$</span>
+        <span class="value-display gasto" id="gasto-display">0,00</span>
+        <input type="tel" id="gasto-input" class="hidden-input" inputmode="numeric" />
+      </div>
+
+      <p class="field-label">Categoria</p>
+      <div class="category-options" id="gasto-categories"></div>
+
+      <div class="form-actions">
+        <button class="btn-cancel" id="gasto-cancel">Cancelar</button>
+        <button class="btn-save" id="gasto-save">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== TELA 02.1: ALERTA DE GASTO ===== -->
+  <div id="screen-alerta" class="screen">
+    <div class="form-screen">
+      <p class="form-screen-label gasto">Novo gasto</p>
+      <div class="value-input-wrapper">
+        <span class="currency-symbol gasto">R$</span>
+        <span class="value-display gasto" id="alerta-valor">0,00</span>
+      </div>
+
+      <div class="alert-card">
+        <p class="alert-icon-text">⚠️ Atenção!</p>
+        <p class="alert-body" id="alerta-msg"></p>
+        <button class="btn-save full-width" id="alerta-cancelar-gasto">Cancelar Gasto</button>
+        <button class="btn-link" id="alerta-ignorar">Ignorar e salvar mesmo assim</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== TELA 03: NOVA ENTRADA ===== -->
+  <div id="screen-nova-entrada" class="screen">
+    <div class="form-screen">
+      <p class="form-screen-label entrada">Nova entrada</p>
+      <div class="value-input-wrapper" id="entrada-value-wrapper">
+        <span class="currency-symbol entrada" id="entrada-currency">R$</span>
+        <span class="value-display entrada" id="entrada-display">0,00</span>
+        <input type="tel" id="entrada-input" class="hidden-input" inputmode="numeric" />
+      </div>
+
+      <div class="form-actions">
+        <button class="btn-cancel" id="entrada-cancel">Cancelar</button>
+        <button class="btn-save" id="entrada-save">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== TELA 04: AJUSTAR RESERVA ===== -->
+  <div id="screen-reserva" class="screen">
+    <div class="form-screen">
+      <p class="form-screen-label reserva">Ajustar reserva</p>
+      <div class="value-input-wrapper" id="reserva-value-wrapper">
+        <span class="currency-symbol reserva" id="reserva-currency">R$</span>
+        <span class="value-display reserva" id="reserva-display">0,00</span>
+        <input type="tel" id="reserva-input" class="hidden-input" inputmode="numeric" />
+      </div>
+
+      <div class="reserva-meta">
+        <p class="label-sm">Reserva atual: <span id="reserva-atual-label" class="reserva-atual-val">R$ 0,00</span></p>
+      </div>
+
+      <div class="reserva-actions-row">
+        <button class="btn-reserva-action" id="btn-guardar">💰 Guardar</button>
+        <button class="btn-reserva-action" id="btn-resgatar">↩️ Resgatar</button>
+      </div>
+
+      <label id="rendimento-wrap" class="rendimento-wrap" style="display:none">
+        <input type="checkbox" id="check-rendimento" />
+        <span>Apenas atualizar rendimento<br><small>Não altera o saldo disponível</small></span>
+      </label>
+
+      <div class="form-actions">
+        <button class="btn-cancel" id="reserva-cancel">Cancelar</button>
+        <button class="btn-save" id="reserva-save">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== TELA 05: CONFIGURAR LIMITES ===== -->
+  <div id="screen-limites" class="screen">
+    <div class="form-screen">
+      <p class="form-screen-label limites">Configurar limites</p>
+      <p class="field-label" style="margin-top:8px;margin-bottom:8px;">Teto por categoria</p>
+
+      <div id="limites-list" class="limites-list"></div>
+
+      <div class="form-actions">
+        <button class="btn-cancel" id="limites-cancel">Cancelar</button>
+        <button class="btn-save" id="limites-save">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== TELA 06: LANÇAMENTOS DA CATEGORIA ===== -->
+  <div id="screen-lancamentos" class="screen">
+    <div class="form-screen">
+      <div class="lanc-header">
+        <button class="btn-back" id="lanc-back">← Voltar</button>
+        <p class="form-screen-label gasto" id="lanc-cat-title">Categoria</p>
+      </div>
+      <div class="lanc-summary" id="lanc-summary"></div>
+      <div class="lanc-list" id="lanc-list"></div>
+    </div>
+  </div>
+
+  <!-- ===== TELA 06.1: EDITAR LANÇAMENTO ===== -->
+  <div id="screen-editar" class="screen">
+    <div class="form-screen">
+      <p class="form-screen-label gasto">Editar gasto</p>
+      <div class="value-input-wrapper" id="editar-value-wrapper">
+        <span class="currency-symbol gasto">R$</span>
+        <span class="value-display gasto" id="editar-display">0,00</span>
+        <input type="tel" id="editar-input" class="hidden-input" inputmode="numeric" />
+      </div>
+
+      <div class="form-actions">
+        <button class="btn-cancel" id="editar-cancel">Cancelar</button>
+        <button class="btn-save" id="editar-save">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== TELA 07: HISTÓRICO ===== -->
+  <div id="screen-historico" class="screen">
+    <div class="form-screen">
+      <div class="lanc-header">
+        <button class="btn-back" id="hist-back">← Voltar</button>
+        <p class="form-screen-label limites">Histórico</p>
+      </div>
+      <div id="historico-list" class="historico-list"></div>
+    </div>
+  </div>
+
+  <script src="storage.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
