@@ -2,7 +2,7 @@
   "name": "MyFinanceApp",
   "short_name": "MyFinance",
   "description": "Gerenciador de finanças pessoais",
-  "start_url": "/index.html",
+  "start_url": "./index.html",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#F5F5F5",
