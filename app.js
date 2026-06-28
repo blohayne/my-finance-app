@@ -415,8 +415,11 @@ function ensureOutros(categoriasFinal) {
 // ===== SERVICE WORKER & ATUALIZAÇÃO =====
 function registerServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
+  let registration = null;
 
   navigator.serviceWorker.register('sw.js').then(reg => {
+    registration = reg;
+
     // Já existe uma versão instalada esperando (ex: usuário tinha fechado
     // o app antes de confirmar uma atualização anterior).
     if (reg.waiting) showUpdateBanner(reg.waiting);
@@ -433,6 +436,25 @@ function registerServiceWorker() {
       });
     });
   }).catch(() => {});
+
+  // IMPORTANTE: quando o app é aberto pela tela inicial (PWA instalado),
+  // o sistema às vezes só "retoma" a página que já estava aberta em
+  // segundo plano, em vez de recarregar do zero — e nesse caso o
+  // navegador não checa sozinho se existe uma versão nova no servidor.
+  // Por isso, toda vez que o app volta a ficar visível, forçamos essa
+  // checagem manualmente.
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && registration) {
+      registration.update().catch(() => {});
+    }
+  });
+
+  // Também checa periodicamente enquanto o app fica aberto (a cada 30
+  // minutos), cobrindo o caso de alguém que deixa o app aberto por muito
+  // tempo sem nunca minimizar/reabrir.
+  setInterval(() => {
+    if (registration) registration.update().catch(() => {});
+  }, 30 * 60 * 1000);
 
   // Depois que o usuário confirma e o novo SW assume o controle,
   // recarrega a página automaticamente para já usar a versão nova.

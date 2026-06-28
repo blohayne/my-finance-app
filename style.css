@@ -146,14 +146,14 @@ html, body {
 /* ===== FAB ===== */
 .fab {
   position: fixed;
-  bottom: 28px;
-  right: 24px;
-  width: 58px;
-  height: 58px;
+  bottom: 26px;
+  right: 20px;
+  width: 72px;
+  height: 72px;
   border-radius: 50%;
   background: var(--primary);
   color: #fff;
-  font-size: 34px;
+  font-size: 40px;
   line-height: 1;
   border: none;
   cursor: pointer;
