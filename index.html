@@ -14,12 +14,18 @@
 </head>
 <body>
 
+  <!-- ===== BANNER DE ATUALIZAÇÃO (Service Worker) ===== -->
+  <div id="update-banner" class="update-banner" style="display:none">
+    <span>🔄 Nova versão disponível</span>
+    <button id="update-banner-btn" class="update-banner-btn" type="button">Atualizar</button>
+  </div>
+
   <!-- ===== TELA 01: DASHBOARD ===== -->
   <div id="screen-dashboard" class="screen active">
     <header class="app-header">
       <button class="btn-header-icon" id="btn-historico" aria-label="Histórico">📅</button>
       <span class="app-title">MyFinanceApp</span>
-      <button class="btn-header-icon" id="btn-config" aria-label="Configurar limites">⚙️</button>
+      <button class="btn-header-icon" id="btn-config" aria-label="Gerenciar categorias">⚙️</button>
     </header>
 
     <div class="balance-section">
@@ -129,17 +135,17 @@
     </div>
   </div>
 
-  <!-- ===== TELA 05: CONFIGURAR LIMITES ===== -->
-  <div id="screen-limites" class="screen">
+  <!-- ===== TELA 05: GERENCIAR CATEGORIAS ===== -->
+  <div id="screen-categorias" class="screen">
     <div class="form-screen">
-      <p class="form-screen-label limites">Configurar limites</p>
-      <p class="field-label" style="margin-top:8px;margin-bottom:8px;">Teto por categoria</p>
+      <p class="form-screen-label limites">Gerenciar Categorias</p>
+      <p class="field-label" style="margin-top:8px;margin-bottom:8px;">Nome e teto de gastos por categoria</p>
 
-      <div id="limites-list" class="limites-list"></div>
+      <div id="categorias-list" class="categorias-list"></div>
 
       <div class="form-actions">
-        <button class="btn-cancel" id="limites-cancel">Cancelar</button>
-        <button class="btn-save" id="limites-save">Salvar</button>
+        <button class="btn-cancel" id="categorias-cancel">Cancelar</button>
+        <button class="btn-save" id="categorias-save">Salvar</button>
       </div>
     </div>
   </div>

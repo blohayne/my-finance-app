@@ -3,15 +3,9 @@
 // ===== ESTADO =====
 let state = Storage.load();
 
-// ===== CATEGORIAS =====
-const CATEGORIES = [
-  { name: 'Moradia & Contas',  emoji: '🏠', color: '#5BB5D5' },
-  { name: 'Mercado & Rotina',  emoji: '🛒', color: '#26C6A6' },
-  { name: 'Transporte',        emoji: '🚗', color: '#9C27B0' },
-  { name: 'Compras & Estilo',  emoji: '🛍️', color: '#E91E63' },
-  { name: 'Lazer & Saídas',    emoji: '🎉', color: '#F44336' },
-  { name: 'Saúde',             emoji: '💊', color: '#00BCD4' },
-];
+// Paleta usada para colorir categorias novas criadas pelo usuário
+// (categorias antigas/legadas já têm sua própria cor fixa).
+const CATEGORIA_COLORS = ['#5BB5D5', '#26C6A6', '#9C27B0', '#E91E63', '#F44336', '#00BCD4', '#FF9800', '#3F51B5', '#8BC34A', '#795548'];
 
 // ===== HELPERS =====
 
@@ -53,6 +47,16 @@ function getProgressColor(pct) {
   return '#4CAF50';
 }
 
+// Usado só para inserir o nome da categoria dentro do atributo value="" do
+// input de edição — evita que aspas no nome quebrem o HTML da linha.
+function escapeAttr(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
 // ===== VIRADA DE MÊS =====
 function checkViradaMes() {
   const mesAtual = getMesAno();
@@ -71,7 +75,7 @@ function checkViradaMes() {
   });
 
   // Zera gastos do mês
-  CATEGORIES.forEach(c => { state.gastosPorCategoria[c.name] = 0; });
+  state.categorias.forEach(c => { state.gastosPorCategoria[c.id] = 0; });
   // Remove transações do mês fechado do array principal (mantém só o mês atual)
   state.transacoes = state.transacoes.filter(t => t.mesAno === mesAtual);
   state.ultimoMes = mesAtual;
@@ -93,9 +97,9 @@ function renderDashboard() {
   const list = document.getElementById('categories-list');
   list.innerHTML = '';
 
-  CATEGORIES.forEach(cat => {
-    const gasto  = state.gastosPorCategoria[cat.name] || 0;
-    const limite = state.limites[cat.name] || 0;
+  state.categorias.forEach(cat => {
+    const gasto  = state.gastosPorCategoria[cat.id] || 0;
+    const limite = state.limites[cat.id] || 0;
     const rawPct = limite > 0 ? (gasto / limite) * 100 : 0;
     const pct    = Math.min(Math.round(rawPct), 100); // barra max 100%
     const estourou = rawPct > 100;
@@ -105,7 +109,7 @@ function renderDashboard() {
 
     const row = document.createElement('div');
     row.className = 'category-row';
-    row.dataset.cat = cat.name;
+    row.dataset.cat = cat.id;
 
     row.innerHTML = `
       <div class="cat-header">
@@ -121,27 +125,27 @@ function renderDashboard() {
       </div>
     `;
 
-    row.addEventListener('click', () => openLancamentos(cat.name));
+    row.addEventListener('click', () => openLancamentos(cat.id));
     list.appendChild(row);
   });
 }
 
-// ===== CATEGORY CHIPS =====
+// ===== CATEGORY CHIPS (tela "Novo gasto") =====
 let selectedCategory = null;
 
 function renderCategoryChips(containerId) {
   selectedCategory = null;
   const container = document.getElementById(containerId);
   container.innerHTML = '';
-  CATEGORIES.forEach(cat => {
+  state.categorias.forEach(cat => {
     const chip = document.createElement('button');
     chip.className = 'cat-chip';
-    chip.dataset.cat = cat.name;
+    chip.dataset.cat = cat.id;
     chip.innerHTML = `<span class="cat-chip-dot" style="background:${cat.color}"></span><span>${cat.emoji} ${cat.name}</span>`;
     chip.addEventListener('click', () => {
       container.querySelectorAll('.cat-chip').forEach(c => c.classList.remove('selected'));
       chip.classList.add('selected');
-      selectedCategory = cat.name;
+      selectedCategory = cat.id;
     });
     container.appendChild(chip);
   });
@@ -177,7 +181,7 @@ function setupValueInput({ wrapperId, displayId, hiddenInputId }) {
   };
 }
 
-// ===== LIMITE INPUT =====
+// ===== LIMITE INPUT (campo numérico de teto, usado na tela de categorias) =====
 function setupLimiteInput(displayEl, hiddenEl) {
   let digits = '';
   function upd() { displayEl.textContent = digitsToDisplay(digits); }
@@ -203,14 +207,14 @@ function setupLimiteInput(displayEl, hiddenEl) {
 // ===== LANÇAMENTOS DA CATEGORIA =====
 let lancCatAtual = null;
 
-function openLancamentos(catName) {
-  lancCatAtual = catName;
-  const cat    = CATEGORIES.find(c => c.name === catName);
-  const gasto  = state.gastosPorCategoria[catName] || 0;
-  const limite = state.limites[catName] || 0;
+function openLancamentos(catId) {
+  lancCatAtual = catId;
+  const cat    = state.categorias.find(c => c.id === catId);
+  const gasto  = state.gastosPorCategoria[catId] || 0;
+  const limite = state.limites[catId] || 0;
   const pct    = limite > 0 ? Math.round((gasto / limite) * 100) : 0;
 
-  document.getElementById('lanc-cat-title').textContent = `${cat.emoji} ${catName}`;
+  document.getElementById('lanc-cat-title').textContent = cat ? `${cat.emoji} ${cat.name}` : 'Categoria';
 
   document.getElementById('lanc-summary').innerHTML = `
     <strong>R$ ${formatCents(gasto)}</strong> gastos de R$ ${formatCents(limite)} (${pct}%)
@@ -218,7 +222,7 @@ function openLancamentos(catName) {
 
   const mesAtual = getMesAno();
   const transacoes = state.transacoes.filter(
-    t => t.tipo === 'gasto' && t.categoria === catName && t.mesAno === mesAtual
+    t => t.tipo === 'gasto' && t.categoria === catId && t.mesAno === mesAtual
   ).sort((a, b) => b.id - a.id);
 
   const listEl = document.getElementById('lanc-list');
@@ -317,15 +321,149 @@ function renderHistorico() {
   });
 }
 
+// ===== GERENCIAR CATEGORIAS =====
+// Estado de trabalho da tela — só é gravado em `state` quando o usuário
+// toca em "Salvar". Cancelar simplesmente descarta tudo isso.
+let categoriaLimiteControllers = {};
+let categoriasRemovidasIds = [];
+
+function buildCategoriasScreen() {
+  const list = document.getElementById('categorias-list');
+  list.innerHTML = '';
+  categoriaLimiteControllers = {};
+  categoriasRemovidasIds = [];
+
+  state.categorias.forEach(cat => {
+    const row = criarLinhaCategoria(cat, state.limites[cat.id] || 0, false);
+    list.appendChild(row);
+  });
+
+  const addBtn = document.createElement('button');
+  addBtn.type = 'button';
+  addBtn.className = 'btn-add-categoria';
+  addBtn.id = 'btn-add-categoria';
+  addBtn.textContent = '+ Adicionar Categoria';
+  addBtn.addEventListener('click', () => {
+    const novoId = 'cat_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    const cor = CATEGORIA_COLORS[list.querySelectorAll('.categoria-row').length % CATEGORIA_COLORS.length];
+    const row = criarLinhaCategoria({ id: novoId, name: 'Nova Categoria', emoji: '🏷️', color: cor }, 0, true);
+    list.insertBefore(row, addBtn);
+    const input = row.querySelector('.categoria-name-input');
+    input.focus();
+    input.select();
+    row.scrollIntoView({ block: 'nearest' });
+  });
+  list.appendChild(addBtn);
+}
+
+function criarLinhaCategoria(cat, limiteCents, isNova) {
+  const row = document.createElement('div');
+  row.className = 'categoria-row';
+  row.dataset.id = cat.id;
+
+  row.innerHTML = `
+    <input type="text" class="categoria-emoji-input" value="${escapeAttr(cat.emoji || '🏷️')}" maxlength="8" aria-label="Ícone da categoria" />
+    <input type="text" class="categoria-name-input" value="${escapeAttr(cat.name)}" placeholder="Nome da categoria" maxlength="30" />
+    <div class="categoria-limite-wrap">
+      <span class="categoria-limite-currency">R$</span>
+      <span class="categoria-limite-display">0,00</span>
+      <input type="tel" class="categoria-limite-hidden" inputmode="numeric" />
+    </div>
+    <button type="button" class="btn-categoria-del" aria-label="Excluir categoria" title="Excluir categoria">🗑️</button>
+  `;
+
+  // Ao tocar no campo de emoji, seleciona o conteúdo atual — assim, ao
+  // abrir o teclado de emoji do celular e tocar num novo, ele substitui
+  // o antigo em vez de ficar acumulando emojis ao lado.
+  const emojiInput = row.querySelector('.categoria-emoji-input');
+  emojiInput.addEventListener('focus', () => emojiInput.select());
+
+  const ctrl = setupLimiteInput(
+    row.querySelector('.categoria-limite-display'),
+    row.querySelector('.categoria-limite-hidden')
+  );
+  ctrl.setVal(limiteCents);
+  categoriaLimiteControllers[cat.id] = ctrl;
+
+  row.querySelector('.btn-categoria-del').addEventListener('click', () => {
+    const gasto = state.gastosPorCategoria[cat.id] || 0;
+
+    if (cat.id === Storage.OUTROS_ID && gasto > 0) {
+      alert('Não é possível excluir "Outros" enquanto houver gastos registrados nela.');
+      return;
+    }
+
+    const nomeAtual = row.querySelector('.categoria-name-input').value.trim() || cat.name;
+    const msg = gasto > 0
+      ? `Excluir "${nomeAtual}"? Os R$ ${formatCents(gasto)} já gastos nessa categoria serão movidos para "Outros".`
+      : `Excluir "${nomeAtual}"?`;
+    if (!confirm(msg)) return;
+
+    row.remove();
+    delete categoriaLimiteControllers[cat.id];
+    if (!isNova) categoriasRemovidasIds.push(cat.id);
+  });
+
+  return row;
+}
+
+function ensureOutros(categoriasFinal) {
+  if (categoriasFinal.some(c => c.id === Storage.OUTROS_ID)) return;
+  categoriasFinal.push({ id: Storage.OUTROS_ID, name: 'Outros', emoji: '📦', color: '#9E9E9E' });
+}
+
+// ===== SERVICE WORKER & ATUALIZAÇÃO =====
+function registerServiceWorker() {
+  if (!('serviceWorker' in navigator)) return;
+
+  navigator.serviceWorker.register('sw.js').then(reg => {
+    // Já existe uma versão instalada esperando (ex: usuário tinha fechado
+    // o app antes de confirmar uma atualização anterior).
+    if (reg.waiting) showUpdateBanner(reg.waiting);
+
+    reg.addEventListener('updatefound', () => {
+      const novoWorker = reg.installing;
+      if (!novoWorker) return;
+      novoWorker.addEventListener('statechange', () => {
+        // "installed" + já existe um controller ativo = é uma ATUALIZAÇÃO
+        // (não a primeira instalação do app).
+        if (novoWorker.state === 'installed' && navigator.serviceWorker.controller) {
+          showUpdateBanner(novoWorker);
+        }
+      });
+    });
+  }).catch(() => {});
+
+  // Depois que o usuário confirma e o novo SW assume o controle,
+  // recarrega a página automaticamente para já usar a versão nova.
+  let recarregando = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (recarregando) return;
+    recarregando = true;
+    window.location.reload();
+  });
+}
+
+function showUpdateBanner(worker) {
+  const banner = document.getElementById('update-banner');
+  const btn    = document.getElementById('update-banner-btn');
+  if (!banner || !btn) return;
+  banner.style.display = 'flex';
+  btn.onclick = () => {
+    worker.postMessage('skipWaiting');
+    banner.style.display = 'none';
+  };
+}
+
 // ===== INPUTS GLOBAIS =====
 let gastoInput, entradaInput, reservaInput, rendaInput;
 let pendingGasto = null;
 let reservaMode  = null;
-let limiteControllers = {};
 
 // ===== INIT =====
 document.addEventListener('DOMContentLoaded', () => {
   checkViradaMes();
+  registerServiceWorker();
 
   // --- FAB ---
   document.getElementById('btn-fab').addEventListener('click', () => showScreen('menu'));
@@ -337,8 +475,8 @@ document.addEventListener('DOMContentLoaded', () => {
     showScreen('historico');
   });
   document.getElementById('btn-config').addEventListener('click', () => {
-    buildLimitesScreen();
-    showScreen('limites');
+    buildCategoriasScreen();
+    showScreen('categorias');
   });
 
   // --- Backs ---
@@ -380,7 +518,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (valor <= 0)        { alert('Informe um valor maior que zero.'); return; }
     if (!selectedCategory) { alert('Selecione uma categoria.'); return; }
 
-    // Alerta: compromete Moradia & Contas?
+    // Alerta: compromete Moradia & Contas? (id fixo legado — se a
+    // categoria for renomeada o alerta continua valendo, pois o id não
+    // muda; se ela for excluída, o limite fica 0 e o alerta simplesmente
+    // não dispara mais, sem quebrar nada.)
     const limFix   = state.limites['Moradia & Contas'] || 0;
     const gastoFix = state.gastosPorCategoria['Moradia & Contas'] || 0;
     const falta    = limFix - gastoFix;
@@ -472,37 +613,56 @@ document.addEventListener('DOMContentLoaded', () => {
     showScreen('dashboard');
   });
 
-  // ===== CONFIGURAR LIMITES =====
-  function buildLimitesScreen() {
-    const list = document.getElementById('limites-list');
-    list.innerHTML = '';
-    limiteControllers = {};
+  // ===== GERENCIAR CATEGORIAS =====
+  document.getElementById('categorias-cancel').addEventListener('click', () => { renderDashboard(); showScreen('dashboard'); });
 
-    CATEGORIES.forEach(cat => {
-      const row = document.createElement('div');
-      row.className = 'limite-row';
-      const safeName = cat.name.replace(/[^a-zA-Z0-9]/g, '_');
-      row.innerHTML = `
-        <div class="limite-row-name">
-          <span class="limite-dot" style="background:${cat.color}"></span>
-          <span>${cat.emoji} ${cat.name}</span>
-        </div>
-        <div class="limite-input-wrap">
-          <span class="limite-currency">R$</span>
-          <span class="limite-display" id="ld-${safeName}">0,00</span>
-          <input type="tel" id="lh-${safeName}" class="limite-hidden" inputmode="numeric" />
-        </div>
-      `;
-      list.appendChild(row);
-      const ctrl = setupLimiteInput(row.querySelector('.limite-display'), row.querySelector(`#lh-${safeName}`));
-      ctrl.setVal(state.limites[cat.name] || 0);
-      limiteControllers[cat.name] = ctrl;
+  document.getElementById('categorias-save').addEventListener('click', () => {
+    const rows = [...document.querySelectorAll('#categorias-list .categoria-row')];
+    if (rows.length === 0) { alert('Adicione ao menos uma categoria.'); return; }
+
+    const categoriasFinal = [];
+    const idsFinal = new Set();
+
+    for (const row of rows) {
+      const id = row.dataset.id;
+      const nameInput = row.querySelector('.categoria-name-input');
+      const emojiInput = row.querySelector('.categoria-emoji-input');
+      const nome = nameInput.value.trim();
+      if (!nome) { alert('Toda categoria precisa de um nome.'); nameInput.focus(); return; }
+      const emoji = emojiInput.value.trim() || '🏷️';
+
+      const original = state.categorias.find(c => c.id === id);
+      categoriasFinal.push({
+        id,
+        name: nome,
+        emoji,
+        color: original ? original.color : CATEGORIA_COLORS[categoriasFinal.length % CATEGORIA_COLORS.length],
+      });
+      state.limites[id] = categoriaLimiteControllers[id] ? categoriaLimiteControllers[id].getCents() : 0;
+      if (!(id in state.gastosPorCategoria)) state.gastosPorCategoria[id] = 0;
+      idsFinal.add(id);
+    }
+
+    // Categorias excluídas nesta sessão: se tinham gasto, o gasto vai
+    // para "Outros" (criando-a se ainda não existir) e as transações
+    // antigas passam a apontar para o id de "Outros".
+    categoriasRemovidasIds.forEach(id => {
+      if (idsFinal.has(id)) return;
+      const gasto = state.gastosPorCategoria[id] || 0;
+
+      if (gasto > 0 && id !== Storage.OUTROS_ID) {
+        ensureOutros(categoriasFinal);
+        idsFinal.add(Storage.OUTROS_ID);
+        if (!(Storage.OUTROS_ID in state.limites)) state.limites[Storage.OUTROS_ID] = 0;
+        state.gastosPorCategoria[Storage.OUTROS_ID] = (state.gastosPorCategoria[Storage.OUTROS_ID] || 0) + gasto;
+        state.transacoes.forEach(t => { if (t.categoria === id) t.categoria = Storage.OUTROS_ID; });
+      }
+
+      delete state.limites[id];
+      delete state.gastosPorCategoria[id];
     });
-  }
 
-  document.getElementById('limites-cancel').addEventListener('click', () => { renderDashboard(); showScreen('dashboard'); });
-  document.getElementById('limites-save').addEventListener('click', () => {
-    CATEGORIES.forEach(cat => { state.limites[cat.name] = limiteControllers[cat.name]?.getCents() || 0; });
+    state.categorias = categoriasFinal;
     Storage.save(state);
     renderDashboard();
     showScreen('dashboard');
